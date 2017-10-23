@@ -491,10 +491,13 @@ static u32 crb_readresp(u8 *buffer, u32 *len)
 
     memcpy(buffer, crb_resp, 6);
     u32 expected = be32_to_cpu(*(u32 *) &buffer[2]);
-    if (expected > *len || expected < 6)
+    if (expected < 6)
         return 1;
 
-    memcpy(buffer + 6, crb_resp + 6, expected - 6);
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
+    *len = MIN(expected, *len);
+
+    memcpy(buffer + 6, crb_resp + 6, *len - 6);
 
     return 0;
 }
@@ -512,9 +515,9 @@ static u32 crb_waitrespready(enum tpmDurationType to_t)
 
     u32 rc = 0;
     u8 locty = crb_find_active_locality();
-    u32 timeout_a = tpm_drivers[CRB_DRIVER_IDX].timeouts[TIS_TIMEOUT_TYPE_A];
+    u32 timeout = tpm_drivers[CRB_DRIVER_IDX].durations[to_t];
 
-    rc = crb_wait_reg(locty, CRB_REG_CTRL_START, timeout_a,
+    rc = crb_wait_reg(locty, CRB_REG_CTRL_START, timeout,
                       CRB_START_INVOKE, 0);
 
     return rc;
