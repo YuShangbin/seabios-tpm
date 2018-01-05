@@ -1774,6 +1774,18 @@ tpm20_process_cfg(tpm_ppi_code msgCode, int verbose)
 }
 
 static int
+tpm_process_cfg(tpm_ppi_code msgCode, int verbose)
+{
+    switch (TPM_version) {
+    case TPM_VERSION_1_2:
+        return tpm12_process_cfg(msgCode, verbose);
+    case TPM_VERSION_2:
+        return tpm20_process_cfg(msgCode, verbose);
+    }
+    return -1;
+}
+
+static int
 tpm12_get_tpm_state(void)
 {
     int state = 0;
@@ -2011,4 +2023,73 @@ tpm_can_show_menu(void)
         return tpm_is_working();
     }
     return 0;
+}
+
+static int tpm_ppi_found_high = 0;
+static struct tpm_ppi *tp;
+
+void
+tpm_ppi_init(void)
+{
+    struct tpm_ppi_anchor *tpa = malloc_fseg(sizeof(*tpa));
+    tp = malloc_high(sizeof(*tp));
+    tp = (void *)0xfed40fa0;
+
+    dprintf(DEBUG_tcg, "Allocated TPM PPI structure at 0x%x\n", (int)tp);
+
+    tpa->sign1 = TCG_MAGIC;
+    tpa->ptr = tp;
+    tpa->sign2 = TCG_MAGIC;
+
+    if (tp->sign1 != TCG_MAGIC || tp->sign2 != TCG_MAGIC) {
+        tp->sign1 = TCG_MAGIC;
+        tp->sign2 = TCG_MAGIC;
+        /* set number of bytes that ACPI can read/write */
+        tp->size = sizeof(tp->opcode) + sizeof(tp->failure) +
+                   sizeof(tp->recent_opcode) + sizeof(tp->response);
+        tp->opcode = 0;
+        tp->recent_opcode = 0;
+        tp->failure = 0;
+        tpm_ppi_found_high = 0;
+    } else {
+        tpm_ppi_found_high = 1;
+    }
+}
+
+void
+tpm_ppi_process(void)
+{
+   tpm_ppi_code op;
+
+   if (tp) {
+        op = tp->opcode;
+        if (!op) {
+            /* intermediate step after a reboot? */
+            op = tp->next_step;
+        } else {
+            /* last full opcode */
+            tp->recent_opcode = op;
+        }
+        if (op) {
+            /*
+             * Reset the opcode so we don't permanently reboot upon
+             * code 3 (Activate).
+             */
+            tp->opcode = 0;
+
+            printf("Processing TPM PPI opcode %d\n", op);
+            tp->failure = (tpm_process_cfg(op, 0) != 0);
+            if (tp->failure)
+                tp->response = 0x0badc0de;
+            else
+                tp->response = 0;
+        }
+   }
+}
+
+void
+tpm_ppi_dump(void)
+{
+    printf("tpm_ppi_found_high = %d\n", tpm_ppi_found_high);
+    printf("tp  = %lx\n", (long)tp);
 }

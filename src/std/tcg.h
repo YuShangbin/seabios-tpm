@@ -551,4 +551,25 @@ struct pcctes_romex
 #define TPM_PPI_OP_SET_OWNERINSTALL_TRUE 8
 #define TPM_PPI_OP_SET_OWNERINSTALL_FALSE 9
 
+struct tpm_ppi {
+    u32 sign1;
+    u16 size;           // number of subsequent bytes for ACPI to access
+    u8 opcode;          // set by ACPI
+    u8 failure;         // set by BIOS (0 = success)
+    u8 recent_opcode;   // set by BIOS
+    u32 response;       // set by BIOS
+    u8 next_step;       // BIOS only
+    u32 sign2;
+} PACKED;
+
+struct tpm_ppi_anchor {
+    u32 sign1;
+    struct tpm_ppi *ptr;
+    u32 sign2;
+};
+
+void tpm_ppi_init(void);
+void tpm_ppi_dump(void);
+void tpm_ppi_process(void);
+
 #endif // tcg.h
