@@ -135,7 +135,7 @@ void *find_acpi_rsdp(void)
 }
 
 void *
-find_acpi_table(u32 signature)
+find_acpi_table_iter(u32 signature, void *prev)
 {
     dprintf(4, "rsdp=%p\n", RsdpAddr);
     if (!RsdpAddr || RsdpAddr->signature != RSDP_SIGNATURE)
@@ -146,15 +146,28 @@ find_acpi_table(u32 signature)
         return NULL;
     void *end = (void*)rsdt + rsdt->length;
     int i;
+    int found = 0;
     for (i=0; (void*)&rsdt->table_offset_entry[i] < end; i++) {
         struct acpi_table_header *tbl = (void*)rsdt->table_offset_entry[i];
         if (!tbl || tbl->signature != signature)
             continue;
         dprintf(4, "table(%x)=%p\n", signature, tbl);
+        if (prev) {
+            if (found)
+                return tbl;
+            found = (tbl == prev);
+            continue;
+        }
         return tbl;
     }
     dprintf(4, "no table %x found\n", signature);
     return NULL;
+}
+
+void *
+find_acpi_table(u32 signature)
+{
+    return find_acpi_table_iter(signature, NULL);
 }
 
 u32
