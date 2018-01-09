@@ -2089,11 +2089,11 @@ tpm_ppi_init(void)
         tp->sign1 = TCG_MAGIC;
         tp->sign2 = TCG_MAGIC;
         /* set number of bytes that ACPI can read/write */
-        tp->size = sizeof(tp->opcode) + sizeof(tp->failure) +
-                   sizeof(tp->recent_opcode) + sizeof(tp->response);
-        tp->opcode = 0;
-        tp->recent_opcode = 0;
-        tp->failure = 0;
+        tp->size = sizeof(tp->pprq) + sizeof(tp->succ) +
+                   sizeof(tp->lppr) + sizeof(tp->pprp);
+        tp->pprq = 0;
+        tp->lppr = 0;
+        tp->succ = 0;
     }
     dprintf(DEBUG_tcg, "sign1 = %x, %x\n", (volatile)tp->sign1, (int)*(volatile unsigned char *)&tp->sign1);
 }
@@ -2104,27 +2104,27 @@ tpm_ppi_process(void)
    tpm_ppi_code op;
 
    if (tp) {
-        op = tp->opcode;
+        op = tp->pprq;
         if (!op) {
             /* intermediate step after a reboot? */
             op = tp->next_step;
         } else {
             /* last full opcode */
-            tp->recent_opcode = op;
+            tp->lppr = op;
         }
         if (op) {
             /*
              * Reset the opcode so we don't permanently reboot upon
              * code 3 (Activate).
              */
-            tp->opcode = 0;
+            tp->pprq = 0;
 
             printf("Processing TPM PPI opcode %d\n", op);
-            tp->failure = (tpm_process_cfg(op, 0, &tp->next_step) != 0);
-            if (tp->failure)
-                tp->response = 0x0badc0de;
+            tp->succ = (tpm_process_cfg(op, 0, &tp->next_step) != 0);
+            if (tp->succ)
+                tp->pprp = 0x0badc0de;
             else
-                tp->response = 0;
+                tp->pprp = 0;
         }
    }
 }

@@ -561,11 +561,11 @@ struct pcctes_romex
 struct tpm_ppi {
     u32 sign1;
     u16 size;           // number of subsequent bytes for ACPI to access
-    u8 opcode;          // set by ACPI
-    u8 failure;         // set by BIOS (0 = success)
-    u8 recent_opcode;   // set by BIOS
-    u32 response;       // set by BIOS
-    u8 parameter;       // set by ACPI
+    u32 pprq;           // opcode; set by ACPI
+    u32 succ;           // set by BIOS (0 = success)
+    u32 lppr;           // last opcode; set by BIOS
+    u32 pprp;           // response from TPM; set by BIOS
+    u32 pprm;           // parameter for opcode; set by ACPI
     u8 next_step;       // BIOS only
     u32 sign2;
 } PACKED;
