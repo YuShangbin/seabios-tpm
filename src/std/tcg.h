@@ -565,6 +565,7 @@ struct tpm_ppi {
     u8 failure;         // set by BIOS (0 = success)
     u8 recent_opcode;   // set by BIOS
     u32 response;       // set by BIOS
+    u8 parameter;       // set by ACPI
     u8 next_step;       // BIOS only
     u32 sign2;
 } PACKED;

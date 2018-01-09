@@ -327,8 +327,6 @@ handle_post(void)
     if (!CONFIG_QEMU && !CONFIG_COREBOOT)
         return;
 
-    tpm_ppi_save();
-
     serial_debug_preinit();
     debug_banner();
 
