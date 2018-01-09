@@ -292,6 +292,14 @@ struct acpi_table_mcfg {
     ACPI_TABLE_HEADER_DEF;
     u8 reserved[8];
     struct acpi_mcfg_allocation allocation[0];
+    u64 tpmppi_addr;
+} PACKED;
+
+#define QEMU_SIGNATURE 0x554d4551
+struct acpi_table_qemu {
+    ACPI_TABLE_HEADER_DEF;
+    u8 reserved[32];
+    u64 tpmppi_addr;
 } PACKED;
 
 #define TCPA_SIGNATURE 0x41504354
@@ -319,5 +327,7 @@ struct tpm2_descriptor_rev2
     u32  log_area_minimum_length;
     u64  log_area_start_address;
 } PACKED;
+
+#define SSDT_SIGNATURE 0x54445353 // SSDT
 
 #endif // acpi.h

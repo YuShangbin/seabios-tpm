@@ -2075,23 +2075,53 @@ tpm_can_show_menu(void)
     return 0;
 }
 
-static int tpm_ppi_found_high = 0;
-static struct tpm_ppi *tp;
+struct tpm_ppi *tp;
+struct tpm_ppi safe_tpm_ppi;
+
+static int
+tpm_ppi_copy(void *src, void *dest)
+{
+    struct tpm_ppi *t = src;
+    
+    if (t->sign1 == TCG_MAGIC && t->sign2 == TCG_MAGIC) {
+        memcpy(dest, src, sizeof(struct tpm_ppi));
+        return 1;
+    }
+    return 0;
+}
+
+void
+tpm_ppi_save(void)
+{
+    tpm_ppi_copy((void *)0x3ffefff0, &safe_tpm_ppi);
+}
 
 void
 tpm_ppi_init(void)
 {
+    struct acpi_table_qemu *qemu = find_acpi_table(QEMU_SIGNATURE);
+    if (!qemu) {
+        dprintf(DEBUG_tcg, "TCGBIOS: No QEMU ACPI table -> no PPI\n");
+        return;
+    }
+    tp = (struct tpm_ppi *)(u32)qemu->tpmppi_addr;
+    if (!tp)
+        return;
+
+#if 0
     struct tpm_ppi_anchor *tpa = malloc_fseg(sizeof(*tpa));
-    tp = malloc_high(sizeof(*tp));
-    tp = (void *)0xfed40fa0;
-
-    dprintf(DEBUG_tcg, "Allocated TPM PPI structure at 0x%x\n", (int)tp);
-
     tpa->sign1 = TCG_MAGIC;
     tpa->ptr = tp;
     tpa->sign2 = TCG_MAGIC;
+    dprintf(DEBUG_tcg, "TCGBIOS: anchor: %p\n", tpa);
+#endif
+
+    /* restore data we may have found after reboot */
+    tpm_ppi_copy(&safe_tpm_ppi, tp);
+    dprintf(DEBUG_tcg, "TCGBIOS: TPM PPI struct at %p\n", tp);
 
     if (tp->sign1 != TCG_MAGIC || tp->sign2 != TCG_MAGIC) {
+        dprintf(DEBUG_tcg, "TCGBIOS: Initializing PPI\n");
         tp->sign1 = TCG_MAGIC;
         tp->sign2 = TCG_MAGIC;
         /* set number of bytes that ACPI can read/write */
@@ -2100,9 +2130,6 @@ tpm_ppi_init(void)
         tp->opcode = 0;
         tp->recent_opcode = 0;
         tp->failure = 0;
-        tpm_ppi_found_high = 0;
-    } else {
-        tpm_ppi_found_high = 1;
     }
 }
 
@@ -2140,6 +2167,34 @@ tpm_ppi_process(void)
 void
 tpm_ppi_dump(void)
 {
-    printf("tpm_ppi_found_high = %d\n", tpm_ppi_found_high);
-    printf("tp  = %lx\n", (long)tp);
+    printf("TCGBIOS: TPM PPI struct at %p\n", tp);
+}
+
+int
+tpm_ppi_check(void)
+{
+    int s = 0;
+    void *ptr = (void *)0x00000;
+
+    while (ptr < (void *)0x100000) {
+        struct tpm_ppi_anchor *tpa = ptr;
+        if (tpa->sign1 == TCG_MAGIC && tpa->sign2 == TCG_MAGIC) {
+            tp = ptr;
+            break;
+        }
+        ptr += 1;
+    }
+    if (!tp) {
+        struct tpm_ppi_anchor *tpa = (struct tpm_ppi_anchor *)0xf5890;
+        dprintf(1, "**** %x vs. %x\n", (unsigned int)tpa->sign1, TCG_MAGIC);
+    }
+    if (!tp)
+        tp = (void *)0x3ffefff0;
+    if (tp) {
+        s|=1;
+        
+        if (tp->sign1 == TCG_MAGIC)
+            s|=2;
+    }
+    return s;
 }

@@ -18,6 +18,7 @@ void tpm_menu(void);
 
 void tpm_ppi_init(void);
 void tpm_ppi_dump(void);
+int tpm_ppi_check(void);
 void tpm_ppi_process(void);
 
 #endif /* TCGBIOS_H */
