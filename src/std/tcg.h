@@ -558,8 +558,6 @@ struct pcctes_romex
 #define TPM_PPI_OP_ENABLE_ACTIVATE_CLEAR 21
 #define TPM_PPI_OP_ENABLE_ACTIVATE_CLEAR_ENABLE_ACTIVATE 22
 
-#define TPM_PPI_ADDR_BASE  0xffff0000
-
 struct tpm_ppi {
     u8 ppin;            /*  0: 1 = initialized */
     u32 ppip;           /*  1: not used */

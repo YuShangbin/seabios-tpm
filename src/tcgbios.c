@@ -2081,8 +2081,17 @@ static u8 next_step = TPM_PPI_OP_NOOP; /* opcode to execute after reboot */
 void
 tpm_ppi_init(void)
 {
-    tp = (struct tpm_ppi *)TPM_PPI_ADDR_BASE;
+    struct qemu_descriptor *qemu = NULL;
 
+    while (1) {
+        qemu  = find_acpi_table_iter(QEMU_SIGNATURE, qemu);
+        if (!qemu)
+            return;
+        if (!memcmp("QEMU", qemu->oem_id, 5) && !memcmp("CONF", qemu->oem_table_id, 5))
+            break;
+    }
+
+    tp = (struct tpm_ppi *)(u32)qemu->tpmppi_address;
     dprintf(DEBUG_tcg, "TCGBIOS: TPM PPI struct at %p\n", tp);
 
     if (!tp->ppin) {
