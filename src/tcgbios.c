@@ -2078,6 +2078,33 @@ tpm_can_show_menu(void)
 static struct tpm_ppi *tp;
 static u8 next_step = TPM_PPI_OP_NOOP; /* opcode to execute after reboot */
 
+#define FLAGS (TPM_PPI_FUNC_IMPLEMENTED | \
+               TPM_PPI_FUNC_ACTION_REBOOT | \
+               TPM_PPI_FUNC_ALLOWED_USR_NOT_REQ)
+
+static const u8 tpm12_ppi_funcs[] = {
+    [TPM_PPI_OP_NOOP] = TPM_PPI_FUNC_IMPLEMENTED |
+                        TPM_PPI_FUNC_ALLOWED_USR_NOT_REQ,
+    [TPM_PPI_OP_ENABLE]  = FLAGS,
+    [TPM_PPI_OP_DISABLE] = FLAGS,
+    [TPM_PPI_OP_ACTIVATE] = FLAGS,
+    [TPM_PPI_OP_DEACTIVATE] = FLAGS,
+    [TPM_PPI_OP_CLEAR] = FLAGS,
+    [TPM_PPI_OP_ENABLE_ACTIVATE] = FLAGS,
+    [TPM_PPI_OP_DEACTIVATE_DISABLE] = FLAGS,
+    [TPM_PPI_OP_SET_OWNERINSTALL_TRUE] = FLAGS,
+    [TPM_PPI_OP_SET_OWNERINSTALL_FALSE] = FLAGS,
+    [TPM_PPI_OP_ENABLE_ACTIVATE_SET_OWNERINSTALL_TRUE] = FLAGS,
+    [TPM_PPI_OP_SET_OWNERINSTALL_FALSE_DEACTIVATE_DISABLE] = FLAGS,
+    [TPM_PPI_OP_CLEAR_ENABLE_ACTIVATE] = FLAGS,
+    [TPM_PPI_OP_ENABLE_ACTIVATE_CLEAR] = FLAGS,
+    [TPM_PPI_OP_ENABLE_ACTIVATE_CLEAR_ENABLE_ACTIVATE] = FLAGS,
+};
+
+static const u8 tpm2_ppi_funcs[] = {
+    [TPM_PPI_OP_CLEAR] = FLAGS,
+};
+
 void
 tpm_ppi_init(void)
 {
@@ -2093,6 +2120,16 @@ tpm_ppi_init(void)
 
     tp = (struct tpm_ppi *)(u32)qemu->tpmppi_address;
     dprintf(DEBUG_tcg, "TCGBIOS: TPM PPI struct at %p\n", tp);
+
+    memset(&tp->func, 0, sizeof(tp->func));
+    switch (qemu->tpm_version) {
+    case TPM_VERSION_1_2:
+        memcpy(&tp->func, tpm12_ppi_funcs, sizeof(tpm12_ppi_funcs));
+        break;
+    case TPM_VERSION_2:
+        memcpy(&tp->func, tpm2_ppi_funcs, sizeof(tpm2_ppi_funcs));
+        break;
+    }
 
     if (!tp->ppin) {
         tp->ppin = 1;
