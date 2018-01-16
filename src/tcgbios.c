@@ -461,7 +461,7 @@ tpm12_read_permanent_flags(char *buf, int buf_len)
     int ret = tpm12_get_capability(TPM_CAP_FLAG, TPM_CAP_FLAG_PERMANENT
                                    , &pf.hdr, sizeof(pf));
     if (ret)
-        return -1;
+        return ret;
 
     memcpy(buf, &pf.perm_flags, buf_len);
 
@@ -843,7 +843,7 @@ tpm12_assert_physical_presence(void)
     struct tpm_permanent_flags pf;
     ret = tpm12_read_permanent_flags((char *)&pf, sizeof(pf));
     if (ret)
-        return -1;
+        return ret;
 
     /* check if hardware physical presence is supported */
     if (pf.flags[PERM_FLAG_IDX_PHYSICAL_PRESENCE_HW_ENABLE]) {
@@ -1501,7 +1501,7 @@ tpm12_read_has_owner(int *has_owner)
     int ret = tpm12_get_capability(TPM_CAP_PROPERTY, TPM_CAP_PROP_OWNER
                                    , &oauth.hdr, sizeof(oauth));
     if (ret)
-        return -1;
+        return ret;
 
     *has_owner = oauth.flag;
 
@@ -1514,7 +1514,7 @@ tpm12_enable_tpm(int enable, int verbose)
     struct tpm_permanent_flags pf;
     int ret = tpm12_read_permanent_flags((char *)&pf, sizeof(pf));
     if (ret)
-        return -1;
+        return ret;
 
     if (pf.flags[PERM_FLAG_IDX_DISABLE] && !enable)
         return 0;
@@ -1537,7 +1537,7 @@ tpm12_activate_tpm(int activate, int allow_reset, int verbose)
     struct tpm_permanent_flags pf;
     int ret = tpm12_read_permanent_flags((char *)&pf, sizeof(pf));
     if (ret)
-        return -1;
+        return ret;
 
     if (pf.flags[PERM_FLAG_IDX_DEACTIVATED] && !activate)
         return 0;
@@ -1579,7 +1579,7 @@ tpm12_force_clear(int enable_activate_before, int enable_activate_after,
     int has_owner;
     int ret = tpm12_read_has_owner(&has_owner);
     if (ret)
-        return -1;
+        return ret;
     if (!has_owner) {
         if (verbose)
             printf("TPM does not have an owner.\n");
@@ -1616,7 +1616,7 @@ tpm12_set_owner_install(int allow, int verbose)
     int has_owner;
     int ret = tpm12_read_has_owner(&has_owner);
     if (ret)
-        return -1;
+        return ret;
     if (has_owner) {
         if (verbose)
             printf("Must first remove owner.\n");
@@ -1626,7 +1626,7 @@ tpm12_set_owner_install(int allow, int verbose)
     struct tpm_permanent_flags pf;
     ret = tpm12_read_permanent_flags((char *)&pf, sizeof(pf));
     if (ret)
-        return -1;
+        return ret;
 
     if (pf.flags[PERM_FLAG_IDX_DISABLE]) {
         if (verbose)
@@ -1713,8 +1713,7 @@ tpm20_clearcontrol(u8 disable, int verbose)
     u32 resp_length = sizeof(rsp);
     int ret = tpmhw_transmit(0, &trc.hdr, &rsp, &resp_length,
                              TPM_DURATION_TYPE_SHORT);
-    if (ret || resp_length != sizeof(rsp) || rsp.errcode)
-        ret = -1;
+    ret = (ret || resp_length < sizeof(rsp)) ? -1 : be32_to_cpu(rsp.errcode);
 
     dprintf(DEBUG_tcg, "TCGBIOS: Return value from sending TPM2_CC_ClearControl = 0x%08x\n",
             ret);
@@ -1742,8 +1741,7 @@ tpm20_clear(void)
     u32 resp_length = sizeof(rsp);
     int ret = tpmhw_transmit(0, &trq.hdr, &rsp, &resp_length,
                              TPM_DURATION_TYPE_MEDIUM);
-    if (ret || resp_length != sizeof(rsp) || rsp.errcode)
-        ret = -1;
+    ret = (ret || resp_length < sizeof(rsp)) ? -1 : be32_to_cpu(rsp.errcode);
 
     dprintf(DEBUG_tcg, "TCGBIOS: Return value from sending TPM2_CC_Clear = 0x%08x\n",
             ret);
