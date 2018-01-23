@@ -103,6 +103,6 @@
 #define DEBUG_unimplemented 2
 #define DEBUG_invalid 3
 #define DEBUG_thread 2
-#define DEBUG_tcg 20
+#define DEBUG_tcg 1
 
 #endif // config.h

@@ -350,8 +350,35 @@ static u32 crb_probe(void)
     if (!CONFIG_TCGBIOS)
         return 0;
 
+{
+    int i = 0;
+    u8 *p = (void *)0xfed40030;
+    u16 *p2 = (void *)p;
+
+    for (i = 0; i < 32; i++) {
+        if (i % 15 == 15)
+            dprintf(1, "\n");
+        dprintf(1, "%02x ", p[i]);
+    }
+    dprintf(1, "\n");
+
+    for (i = 0; i < 32; i++) {
+        if (i % 15 == 15)
+            dprintf(1, "\n");
+        dprintf(1, "%04x ", *(u16*)&p[i]);
+    }
+    dprintf(1, "\n");
+
+    for (i = 0; i < 32; i++) {
+        if (i % 15 == 15)
+            dprintf(1, "\n");
+        dprintf(1, "%04x ", p2[i]);
+    }
+    dprintf(1, "\n");
+}
     u32 ifaceid = readl(CRB_REG(0, CRB_REG_INTF_ID));
 
+dprintf(1, "ifaceid = 0x%08x\n", ifaceid);
     if ((ifaceid & 0xf) != 0xf) {
         if ((ifaceid & 0xf) == 1) {
             /* CRB is active */
